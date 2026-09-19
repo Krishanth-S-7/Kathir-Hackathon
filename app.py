@@ -40,10 +40,9 @@ CUSTOM_CSS = """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-html, body, [class*="css"], [class*="st-"], [data-testid] {
+html, body, .stApp, .stMarkdown, p, label, input, textarea, button, h1, h2, h3, h4, h5, h6 {
     font-family: 'Inter', -apple-system, 'Segoe UI', Roboto, sans-serif !important;
 }
-
 #MainMenu {visibility: hidden;}
 footer {visibility: hidden;}
 [data-testid="stToolbar"] {visibility: hidden;}
