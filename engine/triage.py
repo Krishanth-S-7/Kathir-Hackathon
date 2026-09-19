@@ -104,6 +104,9 @@ from engine.ddi import check_drug_interactions
 TRIAGE_HIGH = "HIGH PRIORITY"
 TRIAGE_CONSIDER = "CONSIDER"
 TRIAGE_LOW = "LOW PRIORITY"
+# --- Layer 2 dual-model ADR priority (orthogonal to the drug-specific state) ---
+ADR_PRIORITY_SINGLE = "SINGLE_HIGH"   # exactly one of ADATIP / GerontoNet is High Risk
+ADR_PRIORITY_DUAL = "DUAL_HIGH"       # both are High Risk -> forces HIGH PRIORITY
 
 # --- PGx Actionability priors ----------------------------------------------
 ACTIONABILITY_NOT_MODELED = "NOT_MODELED"
@@ -246,7 +249,37 @@ def _contextual_modifier_output(high_baseline_adr_risk: bool, actionability: str
         "state_transition_applied": False,
         "note": note,
     }
+def _apply_adr_risk_priority(result: dict, adatip_high_risk: bool, gerontonet_high_risk: bool) -> dict:
+    """Layer 2 dual-model rule, applied after the drug-specific state resolves.
 
+    Both ADATIP and GerontoNet High Risk -> triage forced to HIGH PRIORITY for
+    any drug, including drugs with no modeled PGx relationship.
+    Exactly one High Risk -> triage is unchanged; `adr_priority` = SINGLE_HIGH
+    so the UI can show a separate High Priority card.
+    """
+    if adatip_high_risk and gerontonet_high_risk:
+        result["adr_priority"] = ADR_PRIORITY_DUAL
+        result["adr_priority_source"] = "ADATIP + GerontoNet"
+        result["triage"] = TRIAGE_HIGH
+        result["rationale"] = [
+            "Dual ADR-risk override: both ADATIP and GerontoNet classify this "
+            "patient as High Risk, so testing priority is HIGH regardless of "
+            "drug. This overrides the drug-specific result."
+        ] + list(result["rationale"])
+        modifier = dict(result["contextual_modifier"])
+        modifier["state_transition_applied"] = True
+        modifier["note"] = (
+            "Both Layer 2 models (ADATIP and GerontoNet) report High Risk; "
+            "the dual ADR-risk override has set the priority state to HIGH."
+        )
+        result["contextual_modifier"] = modifier
+    elif adatip_high_risk or gerontonet_high_risk:
+        result["adr_priority"] = ADR_PRIORITY_SINGLE
+        result["adr_priority_source"] = "ADATIP" if adatip_high_risk else "GerontoNet"
+    else:
+        result["adr_priority"] = None
+        result["adr_priority_source"] = None
+    return result
 
 def _clopidogrel_triage(concurrent_medications, high_baseline_adr_risk=False):
     ddi_findings = check_drug_interactions("clopidogrel", concurrent_medications)
@@ -387,6 +420,8 @@ def triage_pgx_actionability(
     platelets: float = None,
     pt_inr: float = None,
     high_baseline_adr_risk: bool = False,
+    adatip_high_risk: bool = False,
+    gerontonet_high_risk: bool = False,
 ) -> dict:
     """Pre-test triage: should a PGx test even be ordered for this drug?
 
@@ -453,7 +488,7 @@ def triage_pgx_actionability(
             "clinical_findings": [],
             "contextual_modifier": _contextual_modifier_output(high_baseline_adr_risk, actionability),
         }
-
+    result = _apply_adr_risk_priority(result, adatip_high_risk, gerontonet_high_risk)
     if age_weight["flags"]:
         result["rationale"] = result["rationale"] + age_weight["flags"]
     result["clinical_findings"] = result["clinical_findings"] + [age_weight]

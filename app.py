@@ -27,8 +27,11 @@ from engine.triage import (
     ETHNICITY_OPTIONS,
     TRIAGE_CONSIDER,
     TRIAGE_HIGH,
+    ADR_PRIORITY_DUAL,
+    ADR_PRIORITY_SINGLE,
     genomeindia_population_priority,
     triage_pgx_actionability,
+
 )
 from storage.audit_logger import get_all_logs, log_decision
 
@@ -162,6 +165,7 @@ textarea[aria-label="Clinical Justification for Override"] {
     font-size: 1.0rem;
     line-height: 1.5;
 }
+.pgx-card-high-priority {background: #fff1e6; border-left: 5px solid #d9480f; color: #5c2200;}
 .pgx-card h3 {margin-top: 0; margin-bottom: 6px; font-weight: 600;}
 .pgx-card-high {background: #fdecea; border-left: 5px solid #b3261e; color: #5c140f;}
 .pgx-card-consider {background: #fef7e0; border-left: 5px solid #b06f00; color: #543e00;}
@@ -842,12 +846,14 @@ with tab1:
                     st.warning("Patient ID is required before running triage.")
                 else:
                     triage_result = triage_pgx_actionability(
-                        drug, concurrent_medications,
-                        age=age, weight=weight,
-                        egfr=egfr, alt_ast=alt_ast,
-                        platelets=platelets, pt_inr=pt_inr,
-                        high_baseline_adr_risk=adr_result["high_baseline_adr_risk"],
-                    )
+                    drug, concurrent_medications,
+                    age=age, weight=weight,
+                    egfr=egfr, alt_ast=alt_ast,
+                    platelets=platelets, pt_inr=pt_inr,
+                    high_baseline_adr_risk=adr_result["high_baseline_adr_risk"],
+                    adatip_high_risk=adatip_high,
+                    gerontonet_high_risk=gerontonet_high,
+                )
                     st.session_state["triage_result"] = triage_result
                     st.session_state["triage_drug"] = drug
                     st.session_state["result"] = None
@@ -867,14 +873,19 @@ with tab1:
                     st.session_state["fhir_bundle"] = None
 
             triage_result = st.session_state.get("triage_result")
-
+            
             if not triage_result:
                 st.info("Click Run Triage above to resolve the Testing-Priority state machine.")
             else:
                 triage_drug = st.session_state.get("triage_drug", drug)
                 triage_state = triage_result["triage"]
                 triage_drug_safe = html.escape(triage_drug)
-
+                if triage_result.get("adr_priority") == ADR_PRIORITY_SINGLE:
+                    _alert_card(
+                        "high-priority", "HIGH PRIORITY (ADR RISK)",
+                        f"<b>{triage_result['adr_priority_source']}</b> classifies this patient "
+                        f"as High Risk. Consider closer monitoring and prioritising PGx testing.",
+                    )
                 if triage_state == TRIAGE_HIGH:
                     _alert_card(
                         "high", "HIGH PRIORITY",
