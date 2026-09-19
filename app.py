@@ -45,7 +45,12 @@ html, body, .stApp, .stMarkdown, p, label, input, textarea, button, h1, h2, h3, 
 }
 #MainMenu {visibility: hidden;}
 footer {visibility: hidden;}
-[data-testid="stToolbar"] {visibility: hidden;}
+[data-testid="stToolbarActions"],
+[data-testid="stMainMenu"],
+[data-testid="stAppDeployButton"],
+.stDeployButton {
+    display: none !important;
+}
 
 .block-container {padding-top: 2rem; padding-bottom: 3rem; max-width: 1200px;}
 
