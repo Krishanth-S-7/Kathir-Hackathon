@@ -28,7 +28,6 @@ from engine.triage import (
     TRIAGE_CONSIDER,
     TRIAGE_HIGH,
     ADR_PRIORITY_DUAL,
-    TRIAGE_HIGH_RISK,
     ADR_PRIORITY_SINGLE,
     genomeindia_population_priority,
     triage_pgx_actionability,
