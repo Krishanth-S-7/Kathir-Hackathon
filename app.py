@@ -880,28 +880,28 @@ with tab1:
                 triage_drug = st.session_state.get("triage_drug", drug)
                 triage_state = triage_result["triage"]
                 triage_drug_safe = html.escape(triage_drug)
-            if triage_result.get("adr_priority") == ADR_PRIORITY_SINGLE:
-                _alert_card(
-                    "high-priority", "HIGH PRIORITY",
-                    f"<b>{triage_result['adr_priority_source']}</b> classifies this patient "
-                    f"as High Risk. Consider closer monitoring and prioritising PGx testing.",
-                )
+                if triage_result.get("adr_priority") == ADR_PRIORITY_SINGLE:
+                    _alert_card(
+                        "high-priority", "HIGH PRIORITY",
+                        f"<b>{triage_result['adr_priority_source']}</b> classifies this patient "
+                        f"as High Risk. Consider closer monitoring and prioritising PGx testing.",
+                    )
 
-            elif triage_state == TRIAGE_HIGH:
-                _alert_card(
-                    "high", "HIGH RISK",
-                    f"PGx testing for <b>{triage_drug_safe}</b> is strongly indicated.",
-                )
-            elif triage_state == TRIAGE_CONSIDER:
-                _alert_card(
-                    "consider", "CONSIDER",
-                    f"Genetic information for <b>{triage_drug_safe}</b> may influence treatment.",
-                )
-            else:
-                _alert_card(
-                    "low", "LOW PRIORITY",
-                    f"PGx testing for <b>{triage_drug_safe}</b> is unlikely to change management.",
-                )
+                elif triage_state == TRIAGE_HIGH:
+                    _alert_card(
+                        "high", "HIGH RISK",
+                        f"PGx testing for <b>{triage_drug_safe}</b> is strongly indicated.",
+                    )
+                elif triage_state == TRIAGE_CONSIDER:
+                    _alert_card(
+                        "consider", "CONSIDER",
+                        f"Genetic information for <b>{triage_drug_safe}</b> may influence treatment.",
+                    )
+                else:
+                    _alert_card(
+                        "low", "LOW PRIORITY",
+                        f"PGx testing for <b>{triage_drug_safe}</b> is unlikely to change management.",
+                    )
 
                 st.markdown("**CPIC Pre-Test Testing Recommendation:**")
                 st.metric("Testing Recommendation", triage_result["cpic_testing_recommendation"])
