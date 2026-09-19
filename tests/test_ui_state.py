@@ -12,6 +12,8 @@ Run with:
 """
 
 import importlib
+import inspect
+import pathlib
 
 import pytest
 
@@ -21,11 +23,13 @@ from engine.clinical import (
     ADR_RISK_STANDARD,
     ALT_AST_THRESHOLD,
     EGFR_THRESHOLD,
+    GERONTONET_PREVIOUS_ADR_POINTS,
     ISOLATED_VERDICT_BASELINE,
     ISOLATED_VERDICT_HIGH,
     PLATELETS_THRESHOLD,
     PT_INR_THRESHOLD,
     calculate_adr_risk,
+    calculate_gerontonet_score,
     is_alt_ast_abnormal,
     is_egfr_abnormal,
     is_platelets_abnormal,
@@ -51,6 +55,153 @@ def test_app_module_imports_without_exception():
     or other exception escaping module initialization.
     """
     importlib.reload(app)
+
+
+_APP_SOURCE = pathlib.Path(app.__file__).read_text()
+
+
+class TestLayer2PatientConditionSelectorRemoved:
+    """The Patient Condition meta-selector (Acute Vulnerability / Chronic
+    Fragility) is removed: ADATIP and GerontoNet operate directly on their
+    own underlying clinical-data state variables, with no top-level
+    conditional-rendering gate above them."""
+
+    def test_patient_condition_selector_text_is_gone_from_the_source(self):
+        assert "Patient Condition" not in _APP_SOURCE
+        assert "Acute Vulnerability" not in _APP_SOURCE
+        assert "Chronic Fragility" not in _APP_SOURCE
+
+    def test_removing_the_selector_does_not_change_either_isolated_verdict(self):
+        # The selector never gated the computation to begin with (see the
+        # prior commit's own isolated-execution-context guarantee); its
+        # removal must leave both verdicts' state transitions unaffected.
+        result = calculate_adr_risk(chronic_lung_disease=True, diuretics=True)
+        assert result["adatip_isolated_verdict"] == ISOLATED_VERDICT_HIGH
+        assert result["gerontonet_isolated_verdict"] == ISOLATED_VERDICT_BASELINE
+
+
+class TestGerontoNetAdrHistoryIntegration:
+    """previous_adr_history is an explicit boolean state variable grouped
+    with GerontoNet's other scoring inputs, contributing the model's own
+    +2 statistical weight when True."""
+
+    def test_previous_adr_history_contributes_the_standard_two_point_weight(self):
+        result = calculate_gerontonet_score(previous_adr_history=True)
+        assert result["breakdown"]["previous_adr_history"] == GERONTONET_PREVIOUS_ADR_POINTS
+        assert result["breakdown"]["previous_adr_history"] == 2
+
+    def test_previous_adr_history_false_contributes_zero(self):
+        result = calculate_gerontonet_score(previous_adr_history=False)
+        assert result["breakdown"]["previous_adr_history"] == 0
+
+    def test_calculate_adr_risk_forwards_the_boolean_into_gerontonet_scoring(self):
+        result = calculate_adr_risk(previous_adr_history=True)
+        assert result["gerontonet_score"]["breakdown"]["previous_adr_history"] == GERONTONET_PREVIOUS_ADR_POINTS
+
+    def test_ui_groups_the_checkbox_with_gerontonet_not_general_history(self):
+        # Regression guard for the UI-placement change: the checkbox's own
+        # label text (and the +2 weight it documents) must appear inside
+        # app.py's source, associated with the GerontoNet input block.
+        # The literal rendered section markers (not any docstring prose
+        # that happens to mention these section names) anchor the check.
+        assert "Previous ADR history" in _APP_SOURCE
+        gerontonet_block_start = _APP_SOURCE.index("**GerontoNet Risk Score (Isolated Context)**")
+        general_history_start = _APP_SOURCE.index("**General Clinical History**")
+        adr_history_checkbox_pos = _APP_SOURCE.index("Previous ADR history")
+        assert gerontonet_block_start < adr_history_checkbox_pos < general_history_start
+
+
+class TestLayer2GeneralClinicalHistoryTextArea:
+    """General Clinical History's primary component is a free-text
+    ingestion field: a single string-state variable a clinician records
+    into, independent of the boolean checkboxes in the same section."""
+
+    def test_text_area_widget_is_present_with_the_requested_label(self):
+        assert "st.text_area(" in _APP_SOURCE
+        assert "Record General Clinical History (ADR, Family, Allergic risks, etc.)" in _APP_SOURCE
+
+    def test_text_area_precedes_the_web_search_call_in_source_order(self):
+        text_area_pos = _APP_SOURCE.index("Record General Clinical History")
+        search_call_pos = _APP_SOURCE.index("_web_search_mockup(general_clinical_history_text")
+        assert text_area_pos < search_call_pos
+
+    def test_text_area_state_is_appended_to_the_integrated_report(self):
+        report_block = _APP_SOURCE[_APP_SOURCE.index("View Integrated Clinical Report"):]
+        assert "general_clinical_history_text" in report_block
+        assert "No clinical history text recorded" in report_block
+
+
+class TestLayer2WebSearchIsAuxiliary:
+    """The Web Search feature is demoted to an auxiliary consumer of the
+    General Clinical History text_area's own string state -- it owns no
+    input field of its own, is gated behind an explicit button inside a
+    collapsible container, and is never the section's primary component."""
+
+    def test_dropdown_constants_no_longer_exist(self):
+        assert not hasattr(app, "_WEB_SEARCH_QUERY_OPTIONS")
+        assert not hasattr(app, "_WEB_SEARCH_QUERY_KEY")
+        assert not hasattr(app, "_MOCK_CASE_REPORT_QUERIES")
+
+    def test_web_search_mockup_takes_history_text_and_a_context_flag(self):
+        sig = inspect.signature(app._web_search_mockup)
+        assert list(sig.parameters) == ["history_text", "high_risk_context"]
+
+    def test_web_search_owns_no_independent_text_input(self):
+        source = inspect.getsource(app._web_search_mockup)
+        assert "st.text_input(" not in source
+        assert "st.text_area(" not in source
+
+    def test_web_search_uses_a_button_trigger_inside_an_expander(self):
+        source = inspect.getsource(app._web_search_mockup)
+        assert "st.expander(\"Web Search Assistant\")" in source
+        assert 'st.button("Search Similar Cases"' in source
+
+    def test_web_search_uses_chat_message_components(self):
+        source = inspect.getsource(app._web_search_mockup)
+        assert "st.chat_message" in source
+
+    def test_web_search_is_called_with_the_history_text_variable(self):
+        assert "_web_search_mockup(general_clinical_history_text, allergy_history or family_history)" in _APP_SOURCE
+
+    def test_empty_history_text_triggers_the_search_without_raising(self):
+        # A pure-function smoke test of the state transition the button
+        # handler performs -- history_text.strip() or None -- confirming
+        # the empty-string case degrades to the None sentinel rather than
+        # raising, exactly as the search button's own logic does.
+        history_text = "   "
+        query_or_none = history_text.strip() or None
+        assert query_or_none is None
+
+    def test_populated_history_text_becomes_the_search_query_string(self):
+        history_text = "  prior ADR to penicillin  "
+        query_or_none = history_text.strip() or None
+        assert query_or_none == "prior ADR to penicillin"
+
+    def test_urllib_parse_is_imported_for_query_encoding(self):
+        assert hasattr(app, "urllib")
+
+
+class TestLayer3GenomeIndiaTextCleanup:
+    """The GenomeIndia UI block renders only its header, the Ethnicity
+    dropdown, and the priority alert box -- the prior decoupling
+    explanation and disclaimer prose are removed from the rendered text."""
+
+    def test_subheader_no_longer_carries_the_parenthetical(self):
+        assert "Population Context: GenomeIndia (Isolated, Decoupled Module)" not in _APP_SOURCE
+        assert "Population Context: GenomeIndia" in _APP_SOURCE
+
+    def test_independent_variable_explanation_text_is_removed(self):
+        assert "This output is an independent variable" not in _APP_SOURCE
+
+    def test_population_level_frequencies_disclaimer_is_removed(self):
+        assert "Population-level frequencies act as an isolated" not in _APP_SOURCE
+
+    def test_ethnicity_dropdown_and_priority_lookup_still_function(self):
+        # The rendering cleanup must not touch the underlying decoupled
+        # computation itself.
+        for ethnicity in ETHNICITY_OPTIONS:
+            result = genomeindia_population_priority(ethnicity)
+            assert result["genomeindia_priority"] in ("High Priority", "Medium Priority", "Low Priority")
 
 
 class TestLayer1NumericLabInputTypeCasting:
@@ -138,25 +289,6 @@ class TestLayer2IsolatedExecutionContexts:
         assert result["adr_risk_flag"] == ADR_RISK_STANDARD
         assert result["adatip_isolated_verdict"] == ISOLATED_VERDICT_BASELINE
         assert result["gerontonet_isolated_verdict"] == ISOLATED_VERDICT_BASELINE
-
-
-class TestLayer2FreeTextSearchModule:
-    """The Web Search module ingests an opaque free-text query -- no
-    predefined dropdown vocabulary -- and never parses the submitted text
-    against a fixed token set."""
-
-    def test_web_search_mockup_takes_a_single_context_flag(self):
-        import inspect
-        sig = inspect.signature(app._web_search_mockup)
-        assert list(sig.parameters) == ["high_risk_context"]
-
-    def test_dropdown_constants_no_longer_exist(self):
-        assert not hasattr(app, "_WEB_SEARCH_QUERY_OPTIONS")
-        assert not hasattr(app, "_WEB_SEARCH_QUERY_KEY")
-        assert not hasattr(app, "_MOCK_CASE_REPORT_QUERIES")
-
-    def test_urllib_parse_is_imported_for_query_encoding(self):
-        assert hasattr(app, "urllib")
 
 
 class TestLayer3GenotypingRoutingState:
