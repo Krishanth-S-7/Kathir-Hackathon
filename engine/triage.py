@@ -100,8 +100,11 @@ from engine.clinical import (
     assess_renal_function,
 )
 from engine.ddi import check_drug_interactions
-TRIAGE_HIGH = "HIGH RISK"  # both ADATIP and GerontoNet High Risk
-TRIAGE_HIGH_RISK = "HIGH PRIORITY"
+# TRIAGE_HIGH = "HIGH RISK"  # both ADATIP and GerontoNet High Risk
+# TRIAGE_HIGH_RISK = "HIGH PRIORITY"
+# TRIAGE_CONSIDER = "CONSIDER"
+# TRIAGE_LOW = "LOW PRIORITY"
+TRIAGE_HIGH = "HIGH RISK"
 TRIAGE_CONSIDER = "CONSIDER"
 TRIAGE_LOW = "LOW PRIORITY"
 # --- Layer 2 dual-model ADR priority (orthogonal to the drug-specific state) ---
@@ -143,7 +146,6 @@ _CPIC_TESTING_STATE_MAP = {
     TRIAGE_HIGH: CPIC_TESTING_REQUIRED,
     TRIAGE_CONSIDER: CPIC_TESTING_RECOMMENDED,
     TRIAGE_LOW: CPIC_TESTING_NOT_INDICATED,
-    TRIAGE_HIGH_RISK: CPIC_TESTING_REQUIRED,
 
 }
 
