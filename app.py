@@ -754,9 +754,10 @@ with tab1:
         # standard CPIC allele pathway lookup.
         with st.container(border=True):
             st.subheader("CPIC Allele Pathway Lookup")
-            result_type_choice = st.radio(
-                "Result Type:", ["Genotype", "Phenotype / TDM"], horizontal=True
-            )
+            # result_type_choice = st.radio(
+            #     "Result Type:", ["Genotype", "Phenotype / TDM"], horizontal=True
+            # )
+            result_type_choice = "Genotype"
             test_type = "Genotype" if result_type_choice == "Genotype" else "Phenotype"
             test_result = _render_test_result_input(drug, test_type)
             clinical_context = _render_clinical_context_inputs(drug, test_type)
