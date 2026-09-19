@@ -77,7 +77,7 @@ GERONTONET_SOURCE = "GerontoNet ADR Risk Score (Onder et al., Arch Intern Med 20
 # state (see the module docstring's two-stage state model).
 EGFR_THRESHOLD = 60.0
 ALT_AST_THRESHOLD = 40.0
-PLATELETS_THRESHOLD = 150.0
+PLATELETS_THRESHOLD = 1.5
 PT_INR_THRESHOLD = 1.2
 
 # Text tokens that type-cast to the None sentinel (missing data) by
