@@ -914,15 +914,17 @@ with tab1:
                             f"*Source: {finding['source']}*"
                         )
 
-                for finding in triage_result["clinical_findings"]:
-                    st.markdown(f"**{finding.get('source', 'Finding')}**")
-                    if finding.get("detail"):
-                        st.caption(finding["detail"])
-                    if finding.get("flags"):
-                        for flag in finding["flags"]:
-                            st.warning(str(flag))
-                    else:
-                        st.caption("No flags raised.")
+                if triage_result["clinical_findings"]:
+                    st.markdown("**Clinical Engine (Layer 1 Lab Flags) Findings:**")
+                    for finding in triage_result["clinical_findings"]:
+                        st.markdown(f"**{finding.get('source', 'Finding')}**")
+                        if finding.get("detail"):
+                            st.caption(finding["detail"])
+                        if finding.get("flags"):
+                            for flag in finding["flags"]:
+                                st.warning(str(flag))
+                        else:
+                            st.caption("No flags raised.")
 
                 st.caption(
                     "Accept or Override this recommendation in the Reporting "
