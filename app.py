@@ -708,7 +708,7 @@ with tab1:
             )
         with verdict_col2:
             tag_class = "risk-tag-high" if gerontonet_high else "risk-tag-standard"
-            st.markdown("ADR in chronic fragility:", help=None)
+            st.markdown("ADR in chronic fragility: GerontoNet", help=None)
             st.markdown(
                 f"<span class='risk-tag {tag_class}'>{html.escape(adr_result['gerontonet_isolated_verdict'])}</span>",
                 unsafe_allow_html=True,
