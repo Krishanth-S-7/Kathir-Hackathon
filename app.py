@@ -887,7 +887,7 @@ with tab1:
                     f"as High Risk. Consider closer monitoring and prioritising PGx testing.",
                 )
 
-            if triage_state == TRIAGE_HIGH:
+            elif triage_state == TRIAGE_HIGH:
                 _alert_card(
                     "high", "HIGH RISK",
                     f"PGx testing for <b>{triage_drug_safe}</b> is strongly indicated.",
