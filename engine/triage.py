@@ -100,8 +100,8 @@ from engine.clinical import (
     assess_renal_function,
 )
 from engine.ddi import check_drug_interactions
-
-TRIAGE_HIGH = "HIGH PRIORITY"
+TRIAGE_HIGH = "HIGH RISK"  # both ADATIP and GerontoNet High Risk
+TRIAGE_HIGH_RISK = "HIGH PRIORITY"
 TRIAGE_CONSIDER = "CONSIDER"
 TRIAGE_LOW = "LOW PRIORITY"
 # --- Layer 2 dual-model ADR priority (orthogonal to the drug-specific state) ---
@@ -143,6 +143,8 @@ _CPIC_TESTING_STATE_MAP = {
     TRIAGE_HIGH: CPIC_TESTING_REQUIRED,
     TRIAGE_CONSIDER: CPIC_TESTING_RECOMMENDED,
     TRIAGE_LOW: CPIC_TESTING_NOT_INDICATED,
+    TRIAGE_HIGH_RISK: CPIC_TESTING_REQUIRED,
+
 }
 
 # --- Mock GenomeIndia population context (Layer 3, Path B, second output) --
@@ -252,7 +254,7 @@ def _contextual_modifier_output(high_baseline_adr_risk: bool, actionability: str
 def _apply_adr_risk_priority(result: dict, adatip_high_risk: bool, gerontonet_high_risk: bool) -> dict:
     """Layer 2 dual-model rule, applied after the drug-specific state resolves.
 
-    Both ADATIP and GerontoNet High Risk -> triage forced to HIGH PRIORITY for
+    Both ADATIP and GerontoNet High Risk -> triage forced to HIGH RISK for
     any drug, including drugs with no modeled PGx relationship.
     Exactly one High Risk -> triage is unchanged; `adr_priority` = SINGLE_HIGH
     so the UI can show a separate High Priority card.
@@ -263,14 +265,14 @@ def _apply_adr_risk_priority(result: dict, adatip_high_risk: bool, gerontonet_hi
         result["triage"] = TRIAGE_HIGH
         result["rationale"] = [
             "Dual ADR-risk override: both ADATIP and GerontoNet classify this "
-            "patient as High Risk, so testing priority is HIGH regardless of "
+            "patient as High Risk, so the result is HIGH RISK regardless of "
             "drug. This overrides the drug-specific result."
         ] + list(result["rationale"])
         modifier = dict(result["contextual_modifier"])
         modifier["state_transition_applied"] = True
         modifier["note"] = (
             "Both Layer 2 models (ADATIP and GerontoNet) report High Risk; "
-            "the dual ADR-risk override has set the priority state to HIGH."
+            "the dual ADR-risk override has set the state to HIGH RISK."
         )
         result["contextual_modifier"] = modifier
     elif adatip_high_risk or gerontonet_high_risk:
