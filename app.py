@@ -525,7 +525,7 @@ with tab1:
         # with vcol0:
         #     weight = st.number_input("Weight (kg)", min_value=0.0, max_value=250.0, value=70.0, step=0.5)
         with vcol1:
-            pulse_rate = st.number_input("PR (bpm)", min_value=0, max_value=250, value=80, step=1)
+            pulse_rate = st.number_input("PR (bpm)", min_value=0, max_value=250, value=80, step=1) 
         with vcol2:
             bp_systolic = st.number_input("BP Sys (mmHg)", min_value=0, max_value=300, value=120, step=1)
         with vcol3:
@@ -914,9 +914,15 @@ with tab1:
                             f"*Source: {finding['source']}*"
                         )
 
-                if triage_result["clinical_findings"]:
-                    st.markdown("**Clinical Engine (Layer 1 Lab Flags) Findings:**")
-                    st.json(triage_result["clinical_findings"])
+                for finding in triage_result["clinical_findings"]:
+                    st.markdown(f"**{finding.get('source', 'Finding')}**")
+                    if finding.get("detail"):
+                        st.caption(finding["detail"])
+                    if finding.get("flags"):
+                        for flag in finding["flags"]:
+                            st.warning(str(flag))
+                    else:
+                        st.caption("No flags raised.")
 
                 st.caption(
                     "Accept or Override this recommendation in the Reporting "
