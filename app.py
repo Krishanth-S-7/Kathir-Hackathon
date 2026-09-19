@@ -575,7 +575,7 @@ with tab1:
             )
         with lab_col2:
             platelets = _lab_numeric_input(
-                "Platelets (x10⁹/L)", key="platelets_input",
+                "Platelets (x10⁵/µL)", key="platelets_input",
                 threshold_help="Conditional threshold: platelets < 150 sets Abnormal.",
                 is_abnormal_fn=is_platelets_abnormal,
             )
