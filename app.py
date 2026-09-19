@@ -510,18 +510,20 @@ with tab1:
     st.header("Layer 1: Clinical Details")
     with st.container(border=True):
         st.markdown("**Demographics**")
-        col1, col2, col3 = st.columns(3)
+        col1, col2, col3 , col4 = st.columns(4)
         with col1:
             patient_name = st.text_input("Name", placeholder="e.g. Ramesh Kumar")
         with col2:
             patient_id = st.text_input("Patient ID (Medical Record Number)", placeholder="e.g. PT-1001")
         with col3:
             age = st.number_input("Age (years)", min_value=0, max_value=120, value=40, step=1)
+        with col4:
+            weight = st.number_input("Weight (kg)", min_value=0.0, max_value=250.0, value=70.0, step=0.5)
 
         st.markdown("**Vitals**")
-        vcol0, vcol1, vcol2, vcol3, vcol4, vcol5, vcol6 = st.columns(7)
-        with vcol0:
-            weight = st.number_input("Weight (kg)", min_value=0.0, max_value=250.0, value=70.0, step=0.5)
+        vcol1, vcol2, vcol3, vcol4, vcol5, vcol6 = st.columns(6)
+        # with vcol0:
+        #     weight = st.number_input("Weight (kg)", min_value=0.0, max_value=250.0, value=70.0, step=0.5)
         with vcol1:
             pulse_rate = st.number_input("PR (bpm)", min_value=0, max_value=250, value=80, step=1)
         with vcol2:
